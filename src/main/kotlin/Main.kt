@@ -34,15 +34,14 @@ fun main() {
                 }
             }.awaitAll()
 
-            result.forEach{
-                it.toString()
+            result.forEach {
+                println(it.toString())
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-
-    Thread.sleep(5_000)
+    Thread.sleep(1_000)
 }
 
 private const val BASE_URL = "http://localhost:9999/api/"
