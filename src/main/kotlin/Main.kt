@@ -1,5 +1,6 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import dto.Author
 import dto.Comment
 import dto.Post
 import dto.PostWithComments
@@ -20,19 +21,30 @@ fun main() {
             val posts = getPosts()
 
             val result = posts.map {
-                async { PostWithComments(it, getComments(it.id)) }
+                async {
+                    PostWithComments(
+                        post = it,
+                        author = getAuthor(it.authorId),
+                        comments = getComments(it.id).map { comment ->
+                            async {
+                                comment to getAuthor(comment.authorId)
+                            }
+                        }.awaitAll()
+                    )
+                }
             }.awaitAll()
 
-            println(result)
-        } catch (e: Exception){
+            result.forEach {
+                println(it.toString())
+            }
+        } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-
     Thread.sleep(1_000)
 }
 
-private const val BASE_URL = "http://localhost:9999/api/slow/"
+private const val BASE_URL = "http://localhost:9999/api/"
 
 private val client = OkHttpClient.Builder()
     .addInterceptor(HttpLoggingInterceptor().apply {
@@ -51,6 +63,11 @@ suspend fun getPosts(): List<Post> = parseResponse(
 suspend fun getComments(postId: Long): List<Comment> = parseResponse(
     "${BASE_URL}posts/$postId/comments",
     object : TypeToken<List<Comment>>() {}
+)
+
+suspend fun getAuthor(authorId: Long): Author = parseResponse(
+    "${BASE_URL}authors/$authorId",
+    object : TypeToken<Author>() {}
 )
 
 suspend fun <T> parseResponse(url: String, typeToken: TypeToken<T>): T {
